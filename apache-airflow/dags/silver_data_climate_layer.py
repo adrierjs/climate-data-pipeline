@@ -75,7 +75,6 @@ def read_and_tranform_data(spark):
     
 
 def read_s3_weather_data():
-
     try:
         aws_conn = get_aws_credentials()
         spark = get_spark_session(access_key=aws_conn.login, secret_key=aws_conn.password)
@@ -88,6 +87,11 @@ def read_s3_weather_data():
     finally:
         logging.info("Shutting down SparkSession.")
         spark.stop()
+
+def write_to_postgres():
+    
+    logging.info("Writing to PostgreSQL...")
+    return None
 
 with DAG(
     "silver_data_climate_layer",
@@ -107,7 +111,12 @@ with DAG(
 
     read_s3_weather_data_task = PythonOperator(
         task_id="read_s3_weather_data_task",
-        python_callable=read_s3_weather_data,
+        python_callable=read_s3_weather_data
+    )
+    
+    write_to_postgres_task = PythonOperator(
+        task_id="write_to_postgres_task",
+        python_callable=write_to_postgres
     )
 
-    read_s3_weather_data_task
+    read_s3_weather_data_task >> write_to_postgres_task
