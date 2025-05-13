@@ -21,13 +21,15 @@ def read_s3_weather_data():
             .config("spark.hadoop.fs.s3a.endpoint", "s3.amazonaws.com") \
             .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.3.4") \
             .getOrCreate()
-        logger.info("SparkSession iniciada com sucesso.")
+        
+        logger.info("SparkSession started successfully.")
 
-        logger.info("Lendo arquivos JSON do S3...")
+        logger.info("Reading JSON files from S3...")
+
         df = spark.read.json("s3a://weather-events-raw/*/*/*")
-        logger.info(f"{df.count()} registros carregados do S3.")
+        logger.info(f"{df.count()} records loaded from S3.")
 
-        logger.info("Selecionando e transformando colunas...")
+        logger.info("Selecting and transforming columns...")
         df = df.select(
             col("location.lat").alias("latitude"),
             col("location.lon").alias("longitude"),
@@ -56,23 +58,22 @@ def read_s3_weather_data():
             col("data.values.windSpeed").alias("wind_speed")
         )
 
-        logger.info("Adicionando colunas de ingestão...")
+        logger.info("Adding ingestion columns...")
         df = df.withColumn("ingestion_at", current_date())
         df = df.withColumn("ingestion_at_timestamp", current_timestamp())
 
-        logger.info("Exibindo primeiros registros transformados:")
-        df.show(truncate=False)
+        logger.info("Displaying first transformed records:")
 
     except Exception as e:
-        logger.error("Erro durante o processamento dos dados do S3.", exc_info=True)
+        logger.error("Error during S3 data processing.", exc_info=True)
         raise e
 
     finally:
-        logger.info("Encerrando SparkSession.")
+        logger.info("Shutting down SparkSession.")
         spark.stop()
 
 with DAG(
-    "silver_layer_data_climate",
+    "silver_data_climate_layer",
     default_args={
         "depends_on_past": False,
         "email_on_failure": False,
