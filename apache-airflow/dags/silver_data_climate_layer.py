@@ -5,6 +5,7 @@ from airflow.models.dag import DAG
 from airflow.operators.python import PythonOperator
 from airflow.hooks.base_hook import BaseHook
 from airflow.providers.postgres.hooks.postgres import PostgresHook
+from airflow.operators.dagrun_operator import TriggerDagRunOperator
 
 
 def get_aws_credentials():
@@ -149,9 +150,11 @@ with DAG(
         python_callable=read_s3_weather_data
     )
     
-    write_to_postgres_task = PythonOperator(
-        task_id="write_to_postgres_task",
-        python_callable=write_to_postgres
+    data_create_gold_climate_layer = TriggerDagRunOperator(
+        task_id='data_create_gold_climate_layer',
+        trigger_dag_id='gold_data_climate_layer',
+        conf={"mensagem": "Chamando a child_dag"},
+        wait_for_completion=True, 
     )
-
-    read_s3_weather_data_task >> write_to_postgres_task
+    
+    read_s3_weather_data_task >> data_create_gold_climate_layer
