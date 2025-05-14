@@ -54,7 +54,8 @@ def get_spark_session(access_key,secret_key):
 
 def read_and_tranform_data(spark, jdbc_url, properties):
     from pyspark.sql.functions import col, current_date, current_timestamp, from_utc_timestamp, to_date
-    
+    from pyspark.sql.types import DoubleType, StringType, TimestampType, DateType, IntegerType
+
     logging.info("Reading JSON files from S3...")
 
     df = spark.read.json("s3a://weather-events-raw/*/*/*")
@@ -62,36 +63,36 @@ def read_and_tranform_data(spark, jdbc_url, properties):
 
     logging.info("Selecting and transforming columns...")
     df = df.select(
-        col("location.lat").alias("latitude"),
-        col("location.lon").alias("longitude"),
-        col("data.time").alias("datetime_utc"),
-        to_date(from_utc_timestamp(col("data.time"), "America/Sao_Paulo").alias("datetime_brasil")),
-        col("data.values.cloudBase").alias("cloud_base"),
-        col("data.values.cloudCeiling").alias("cloud_ceiling"),
-        col("data.values.cloudCover").alias("cloud_cover"),
-        col("data.values.dewPoint").alias("dew_point"),
-        col("data.values.freezingRainIntensity").alias("freezing_rain_intensity"),
-        col("data.values.humidity").alias("humidity"),
-        col("data.values.precipitationProbability").alias("precipitation_probability"),
-        col("data.values.pressureSeaLevel").alias("pressure_sea_level"),
-        col("data.values.pressureSurfaceLevel").alias("pressure_surface_level"),
-        col("data.values.rainIntensity").alias("rain_intensity"),
-        col("data.values.sleetIntensity").alias("sleet_intensity"),
-        col("data.values.snowIntensity").alias("snow_intensity"),
-        col("data.values.temperature").alias("temperature"),
-        col("data.values.temperatureApparent").alias("temperature_apparent"),
-        col("data.values.uvHealthConcern").alias("uv_health_concern"),
-        col("data.values.uvIndex").alias("uv_index"),
-        col("data.values.visibility").alias("visibility"),
-        col("data.values.weatherCode").alias("weather_code"),
-        col("data.values.windDirection").alias("wind_direction"),
-        col("data.values.windGust").alias("wind_gust"),
-        col("data.values.windSpeed").alias("wind_speed")
+        col("location.lat").cast(DoubleType()).alias("latitude"),
+        col("location.lon").cast(DoubleType()).alias("longitude"),
+        col("data.time").cast(StringType()).alias("datetime_utc"),
+        to_date(from_utc_timestamp(col("data.time"), "America/Sao_Paulo")).alias("datetime_brasil"),
+        col("data.values.cloudBase").cast(DoubleType()).alias("cloud_base"),
+        col("data.values.cloudCeiling").cast(DoubleType()).alias("cloud_ceiling"),
+        col("data.values.cloudCover").cast(DoubleType()).alias("cloud_cover"),
+        col("data.values.dewPoint").cast(DoubleType()).alias("dew_point"),
+        col("data.values.freezingRainIntensity").cast(DoubleType()).alias("freezing_rain_intensity"),
+        col("data.values.humidity").cast(DoubleType()).alias("humidity"),
+        col("data.values.precipitationProbability").cast(DoubleType()).alias("precipitation_probability"),
+        col("data.values.pressureSeaLevel").cast(DoubleType()).alias("pressure_sea_level"),
+        col("data.values.pressureSurfaceLevel").cast(DoubleType()).alias("pressure_surface_level"),
+        col("data.values.rainIntensity").cast(DoubleType()).alias("rain_intensity"),
+        col("data.values.sleetIntensity").cast(DoubleType()).alias("sleet_intensity"),
+        col("data.values.snowIntensity").cast(DoubleType()).alias("snow_intensity"),
+        col("data.values.temperature").cast(DoubleType()).alias("temperature"),
+        col("data.values.temperatureApparent").cast(DoubleType()).alias("temperature_apparent"),
+        col("data.values.uvHealthConcern").cast(IntegerType()).alias("uv_health_concern"),
+        col("data.values.uvIndex").cast(DoubleType()).alias("uv_index"),
+        col("data.values.visibility").cast(DoubleType()).alias("visibility"),
+        col("data.values.weatherCode").cast(IntegerType()).alias("weather_code"),
+        col("data.values.windDirection").cast(DoubleType()).alias("wind_direction"),
+        col("data.values.windGust").cast(DoubleType()).alias("wind_gust"),
+        col("data.values.windSpeed").cast(DoubleType()).alias("wind_speed")
     )
 
     logging.info("Adding ingestion columns...")
-    df = df.withColumn("ingestion_at", current_date())
-    df = df.withColumn("ingestion_at_timestamp", current_timestamp())
+    df = df.withColumn("ingestion_at", current_date().cast(DateType()))
+    df = df.withColumn("ingestion_at_timestamp", current_timestamp().cast(TimestampType()))
     
     logging.info("Saving data to PostgreSQL")
     
