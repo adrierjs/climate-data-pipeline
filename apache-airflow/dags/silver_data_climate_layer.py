@@ -4,12 +4,35 @@ from datetime import datetime, timedelta
 from airflow.models.dag import DAG
 from airflow.operators.python import PythonOperator
 from airflow.hooks.base_hook import BaseHook
+from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 
 def get_aws_credentials():
     aws_credentials = BaseHook.get_connection("aws_default_conn_id")
     logging.info("Geting aws credentials...")
     return aws_credentials
+
+def get_postgres_jdbc_info():
+    """
+    Pega a URL e as propriedades JDBC usando PostgresHook.
+    """
+    hook = PostgresHook(postgres_conn_id="postgres_climate_rds")
+    conn = hook.get_connection(hook.postgres_conn_id)
+
+    host = conn.host
+    port = conn.port or 5432
+    schema = conn.schema or "postgres"
+    user = conn.login
+    password = conn.password
+
+    jdbc_url = f"jdbc:postgresql://{host}:{port}/{schema}"
+    properties = {
+        "user": user,
+        "password": password,
+        "driver": "org.postgresql.Driver"
+    }
+
+    return jdbc_url, properties
 
 def get_spark_session(access_key,secret_key):
     from pyspark.sql import SparkSession
@@ -22,13 +45,14 @@ def get_spark_session(access_key,secret_key):
             .config("spark.hadoop.fs.s3a.secret.key", secret_key) \
             .config("spark.hadoop.fs.s3a.endpoint", "s3.amazonaws.com") \
             .config("spark.jars.packages", "org.apache.hadoop:hadoop-aws:3.3.4") \
+            .config("spark.jars", "/opt/spark/jars/postgresql-42.7.2.jar") \
             .getOrCreate()
-        
+            
     logging.info("SparkSession started successfully.")
     
     return spark
 
-def read_and_tranform_data(spark):
+def read_and_tranform_data(spark, jdbc_url, properties):
     from pyspark.sql.functions import col, current_date, current_timestamp, from_utc_timestamp, to_date
     
     logging.info("Reading JSON files from S3...")
@@ -68,6 +92,10 @@ def read_and_tranform_data(spark):
     logging.info("Adding ingestion columns...")
     df = df.withColumn("ingestion_at", current_date())
     df = df.withColumn("ingestion_at_timestamp", current_timestamp())
+    
+    logging.info("Saving data to PostgreSQL")
+    
+    df.write.jdbc(url=jdbc_url, table="silver_events_climatics.evemts_climatics_torrow", mode="overwrite", properties=properties)
 
     logging.info("Displaying first transformed records:")
     
@@ -78,7 +106,8 @@ def read_s3_weather_data():
     try:
         aws_conn = get_aws_credentials()
         spark = get_spark_session(access_key=aws_conn.login, secret_key=aws_conn.password)
-        read_and_tranform_data(spark)
+        jdbc_url, properties = get_postgres_jdbc_info()
+        read_and_tranform_data(spark, jdbc_url, properties)
         
     except Exception as e:
         logging.error("Error during S3 data processing.", exc_info=True)
@@ -89,6 +118,11 @@ def read_s3_weather_data():
         spark.stop()
 
 def write_to_postgres():
+    pass
+    
+    
+
+# Escreve os dados tratados no PostgreSQL
     
     logging.info("Writing to PostgreSQL...")
     return None
