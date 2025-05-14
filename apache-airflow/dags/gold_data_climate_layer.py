@@ -141,7 +141,6 @@ with DAG(
         """),
     )
 
-    # Encadeamento opcional (executar todas as tasks em paralelo)
     [
         avg_temperature_daily,
         precipitation_daily,
