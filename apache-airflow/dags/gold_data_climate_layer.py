@@ -6,7 +6,7 @@ from airflow.operators.python import PythonOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 
-def run_postgres_query(query: str):
+def run_postgres_query(query):
     def _execute_query():
         hook = PostgresHook(postgres_conn_id="postgres_climate_rds")
         logging.info(f"Executing query: {query}")
