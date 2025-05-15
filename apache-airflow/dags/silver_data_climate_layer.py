@@ -64,6 +64,7 @@ def read_and_tranform_data(spark, jdbc_url, properties):
 
     logging.info("Selecting and transforming columns...")
     df = df.select(
+        col("location.name").cast(DoubleType()).alias("location_name"),
         col("location.lat").cast(DoubleType()).alias("latitude"),
         col("location.lon").cast(DoubleType()).alias("longitude"),
         col("data.time").cast(StringType()).alias("datetime_utc"),
@@ -97,7 +98,7 @@ def read_and_tranform_data(spark, jdbc_url, properties):
     
     logging.info("Saving data to PostgreSQL")
     
-    df.write.jdbc(url=jdbc_url, table="silver_events_climatics.evemts_climatics_torrow", mode="overwrite", properties=properties)
+    df.write.jdbc(url=jdbc_url, table="silver_events_climatics.events_climatics_torrow", mode="append", properties=properties)
 
     logging.info("Displaying first transformed records:")
     
